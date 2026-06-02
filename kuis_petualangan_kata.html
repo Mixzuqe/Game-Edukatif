@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petualangan Kata: Sinonim & Antonim</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            /* Background cerah seperti langit */
+            background-color: #87CEEB;
+            background-image: radial-gradient(circle at 50% 50%, #b0e0e6 0%, #87ceeb 50%, #4682b4 100%);
+            overflow-x: hidden;
+        }
+
+        /* Tombol bergaya game anak-anak (3D effect) */
+        .btn-game {
+            transition: all 0.1s ease-in-out;
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+        }
+        .btn-game:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.2);
+        }
+
+        /* Animasi pop-up saat jawaban benar/salah */
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Animasi goyang untuk jawaban salah */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            50% { transform: translateX(10px) rotate(5deg); }
+            75% { transform: translateX(-10px) rotate(-5deg); }
+        }
+        .animate-shake {
+            animation: shake 0.5s ease-in-out;
+        }
+
+        /* Hujan Konfeti untuk kemenangan */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall linear forwards;
+            z-index: 50;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); }
+        }
+
+        /* Awan mengambang di background */
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.8;
+            animation: float 20s infinite linear;
+            z-index: -1;
+        }
+        .cloud::before, .cloud::after {
+            content: '';
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+        .cloud::before { width: 50px; height: 50px; top: -20px; left: 15px; }
+        .cloud::after { width: 40px; height: 40px; top: -10px; right: 15px; }
+        
+        @keyframes float {
+            from { transform: translateX(-150px); }
+            to { transform: translateX(100vw); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <button id="btn-mute" onclick="AudioManager.toggleMute()" class="fixed top-4 right-4 z-50 bg-white p-3 rounded-full shadow-lg text-2xl border-4 border-blue-400 btn-game hover:bg-gray-100 hidden">
+        🔊
+    </button>
+
+    <div class="cloud" style="width: 100px; height: 35px; top: 10%; left: -100px; animation-duration: 25s;"></div>
+    <div class="cloud" style="width: 140px; height: 45px; top: 30%; left: -150px; animation-duration: 35s; transform: scale(1.2);"></div>
+    <div class="cloud" style="width: 80px; height: 30px; top: 70%; left: -80px; animation-duration: 20s;"></div>
+
+    <main class="bg-white rounded-[2rem] shadow-2xl max-w-md w-full relative overflow-hidden border-8 border-white border-opacity-50">
+        
+        <!-- ================= Layar Mulai ================= -->
+        <section id="screen-start" class="p-8 text-center animate-pop">
+            <div class="text-6xl mb-4">🦁🦉🐸</div>
+            <h1 class="text-4xl font-black text-blue-600 mb-2 drop-shadow-md">Petualangan Kata!</h1>
+            <p class="text-lg text-gray-600 mb-8 font-semibold">Mari bermain dan belajar Sinonim & Antonim Bahasa Indonesia.</p>
+            <button onclick="startLearning()" class="btn-game w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-black text-2xl py-4 px-6 rounded-2xl border-4 border-yellow-500">
+                MULAI BELAJAR! 🚀
+            </button>
+        </section>
+
+        <!-- ================= Layar Materi ================= -->
+        <section id="screen-material" class="hidden flex-col h-full p-6 justify-between bg-white rounded-[2rem]">
+            <!-- Header Materi -->
+            <div class="text-center mb-6">
+                <h2 class="text-3xl font-black text-blue-600 drop-shadow-sm">Ruang Belajar 📚</h2>
+                <div class="flex justify-center gap-2 mt-3" id="slide-indicators">
+                    <!-- Dots indikator akan diatur oleh JS -->
+                    <div class="h-3 w-6 bg-blue-600 rounded-full"></div>
+                    <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
+                    <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
+                    <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
+                </div>
+            </div>
+
+            <!-- Area Konten Slide -->
+            <div class="flex-grow flex items-center justify-center relative min-h-[250px]">
+                
+                <!-- Slide 1: Definisi Sinonim -->
+                <div id="slide-0" class="material-slide w-full text-center animate-pop">
+                    <div class="text-7xl mb-4">🤝</div>
+                    <h3 class="text-3xl font-black text-purple-600 mb-4 drop-shadow-sm">Apa itu Sinonim?</h3>
+                    <p class="text-xl text-gray-700 font-bold bg-purple-100 p-6 rounded-3xl border-4 border-purple-300 shadow-inner">
+                        Sinonim adalah <span class="text-purple-700">Persamaan Kata</span>.<br><br>
+                        Kata-katanya berbeda, tapi memiliki arti yang sama atau sangat mirip!
+                    </p>
+                </div>
+
+                <!-- Slide 2: Contoh Sinonim -->
+                <div id="slide-1" class="material-slide hidden w-full text-center animate-pop">
+                    <div class="text-7xl mb-4">✨</div>
+                    <h3 class="text-3xl font-black text-green-600 mb-4 drop-shadow-sm">Contoh Sinonim</h3>
+                    <div class="bg-green-100 p-5 rounded-3xl border-4 border-green-300 flex flex-col gap-3 font-black text-xl text-green-900 shadow-inner">
+                        <div class="bg-white p-3 rounded-2xl shadow-sm">Pintar = Pandai = Cerdas 🧠</div>
+                        <div class="bg-white p-3 rounded-2xl shadow-sm">Senang = Gembira = Bahagia 🤩</div>
+                        <div class="bg-white p-3 rounded-2xl shadow-sm">Baju = Pakaian 👕</div>
+                    </div>
+                </div>
+
+                <!-- Slide 3: Definisi Antonim -->
+                <div id="slide-2" class="material-slide hidden w-full text-center animate-pop">
+                    <div class="text-7xl mb-4">⚔️</div>
+                    <h3 class="text-3xl font-black text-red-600 mb-4 drop-shadow-sm">Apa itu Antonim?</h3>
+                    <p class="text-xl text-gray-700 font-bold bg-red-100 p-6 rounded-3xl border-4 border-red-300 shadow-inner">
+                        Antonim adalah <span class="text-red-700">Lawan Kata</span>.<br><br>
+                        Dua kata yang maknanya saling bermusuhan atau bertolak belakang!
+                    </p>
+                </div>
+
+                <!-- Slide 4: Contoh Antonim -->
+                <div id="slide-3" class="material-slide hidden w-full text-center animate-pop">
+                    <div class="text-7xl mb-4">⚖️</div>
+                    <h3 class="text-3xl font-black text-orange-600 mb-4 drop-shadow-sm">Contoh Antonim</h3>
+                    <div class="bg-orange-100 p-5 rounded-3xl border-4 border-orange-300 flex flex-col gap-3 font-black text-xl text-orange-900 shadow-inner">
+                        <div class="bg-white p-3 rounded-2xl shadow-sm flex justify-between px-6"><span>Cepat 🚀</span> <span>><</span> <span>🐢 Lambat</span></div>
+                        <div class="bg-white p-3 rounded-2xl shadow-sm flex justify-between px-6"><span>Besar 🐘</span> <span>><</span> <span>🐜 Kecil</span></div>
+                        <div class="bg-white p-3 rounded-2xl shadow-sm flex justify-between px-6"><span>Rajin 📚</span> <span>><</span> <span>😴 Malas</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Navigasi Slide -->
+            <div class="flex justify-between mt-8 gap-4">
+                <button id="btn-prev-slide" onclick="prevSlide()" class="hidden btn-game bg-gray-300 hover:bg-gray-400 text-gray-700 font-black text-xl py-4 px-4 rounded-2xl border-4 border-gray-400">
+                    ⬅️
+                </button>
+                <button id="btn-next-slide" onclick="nextSlide()" class="btn-game flex-1 bg-blue-500 hover:bg-blue-600 text-white font-black text-xl py-4 px-4 rounded-2xl border-4 border-blue-700">
+                    LANJUTKAN ➡️
+                </button>
+                <button id="btn-start-game-from-slide" onclick="startGame()" class="hidden btn-game flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-black text-xl py-4 px-4 rounded-2xl border-4 border-yellow-500 animate-pulse">
+                    MULAI GAME! 🎮
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= Layar Permainan ================= -->
+        <section id="screen-game" class="hidden flex-col h-full">
+            <!-- Header: Progress & Skor -->
+            <div class="bg-blue-500 text-white p-4 rounded-b-3xl shadow-md">
+                <div class="flex justify-between items-center mb-3 font-bold text-lg">
+                    <div>Pertanyaan <span id="q-current" class="text-yellow-300 text-2xl">1</span>/10</div>
+                    <div>⭐ <span id="score-display">0</span></div>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full bg-blue-900 rounded-full h-4 border-2 border-blue-400">
+                    <div id="progress-bar" class="bg-yellow-400 h-full rounded-full transition-all duration-500" style="width: 10%"></div>
+                </div>
+            </div>
+
+            <!-- Area Pertanyaan -->
+            <div class="p-6 flex-grow flex flex-col justify-center items-center">
+                <!-- Box Soal -->
+                <div class="bg-purple-100 border-4 border-purple-300 p-6 rounded-3xl mb-8 w-full shadow-inner relative">
+                    <div class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-5xl bg-white rounded-full p-1 shadow-md" id="mascot">
+                        🤔
+                    </div>
+                    <h2 id="question-text" class="text-xl md:text-2xl font-bold text-purple-900 text-center mt-4 leading-relaxed">
+                        Memuat pertanyaan...
+                    </h2>
+                </div>
+
+                <!-- Grid Opsi Jawaban -->
+                <div id="options-container" class="grid grid-cols-1 gap-4 w-full">
+                    <!-- Tombol akan di-generate oleh JS -->
+                </div>
+            </div>
+
+            <!-- Overlay Feedback (Benar/Salah) -->
+            <div id="feedback-overlay" class="hidden absolute inset-0 bg-white bg-opacity-90 z-10 flex-col items-center justify-center">
+                <div id="feedback-emoji" class="text-8xl mb-4"></div>
+                <h2 id="feedback-title" class="text-4xl font-black mb-2"></h2>
+                <p id="feedback-text" class="text-xl font-bold text-gray-700 text-center px-4 mb-8"></p>
+                <button onclick="nextQuestion()" class="btn-game bg-blue-500 hover:bg-blue-600 text-white font-black text-2xl py-3 px-8 rounded-2xl border-4 border-blue-700">
+                    LANJUT ➡️
+                </button>
+            </div>
+        </section>
+
+        <!-- ================= Layar Hasil (Selesai) ================= -->
+        <section id="screen-result" class="hidden p-8 text-center">
+            <h2 class="text-4xl font-black text-purple-600 mb-2">Horeee! 🎉</h2>
+            <p class="text-lg text-gray-600 font-bold mb-4">Kamu telah menyelesaikan petualangan!</p>
+            
+            <div class="bg-yellow-100 border-4 border-yellow-400 rounded-3xl p-6 mb-8 relative">
+                <div id="stars-container" class="text-5xl flex justify-center gap-2 mb-4">
+                    <!-- Bintang akan diisi oleh JS -->
+                </div>
+                <div class="text-gray-500 font-bold text-lg mb-1">Total Skormu:</div>
+                <div id="final-score" class="text-6xl font-black text-orange-500 drop-shadow-md">0</div>
+            </div>
+
+            <p id="result-message" class="text-xl font-bold text-blue-600 mb-8"></p>
+
+            <button onclick="resetGame()" class="btn-game w-full bg-green-400 hover:bg-green-500 text-green-900 font-black text-2xl py-4 px-6 rounded-2xl border-4 border-green-500">
+                MAIN LAGI! 🔄
+            </button>
+        </section>
+
+    </main>
+
+    <script>
+        const quizData = [
+            {
+                question: "Manakah di antara pilihan berikut yang merupakan sinonim dari kata 'gembira'?",
+                correctAnswer: "Bahagia",
+                options: ["Sedih", "Marah", "Bahagia", "Takut"]
+            },
+            {
+                question: "Lawan kata atau antonim yang tepat untuk kata 'luas' adalah...",
+                correctAnswer: "Sempit",
+                options: ["Besar", "Lebar", "Sempit", "Panjang"]
+            },
+            {
+                question: "Kata 'sahabat' memiliki persamaan kata (sinonim) dengan...",
+                correctAnswer: "Teman",
+                options: ["Musuh", "Lawan", "Teman", "Tetangga"]
+            },
+            {
+                question: "Apa antonim dari kata 'pemberani'?",
+                correctAnswer: "Penakut",
+                options: ["Kuat", "Hebat", "Penakut", "Tangguh"]
+            },
+            {
+                question: "Sinonim dari kata 'pakaian' dalam bahasa Indonesia adalah...",
+                correctAnswer: "Busana",
+                options: ["Makanan", "Mainan", "Busana", "Kendaraan"]
+            },
+            {
+                question: "Manakah pasangan kata berikut yang hubungannya merupakan antonim?",
+                correctAnswer: "Tinggi - Rendah",
+                options: ["Besar - Raksasa", "Tinggi - Rendah", "Cepat - Kilat", "Pintar - Cerdas"]
+            },
+            {
+                question: "Kata 'dahulu' merupakan antonim dari kata...",
+                correctAnswer: "Sekarang",
+                options: ["Nanti", "Kemarin", "Esok", "Sekarang"]
+            },
+            {
+                question: "Sinonim dari kata 'melihat' adalah...",
+                correctAnswer: "Memandang",
+                options: ["Mendengar", "Merasakan", "Memandang", "Berjalan"]
+            },
+            {
+                question: "Jika 'subur' berpasangan dengan 'gersang', maka hubungan kedua kata tersebut adalah...",
+                correctAnswer: "Antonim",
+                options: ["Sinonim", "Antonim", "Homonim", "Persamaan"]
+            },
+            {
+                question: "Manakah kata di bawah ini yang merupakan sinonim dari kata 'buku' dalam konteks literatur ilmiah atau kitab?",
+                correctAnswer: "Pustaka",
+                options: ["Majalah", "Koran", "Pustaka", "Kertas"]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswering = false; // Mencegah klik ganda
+
+        let currentSlideIndex = 0;
+        const totalSlides = 4;
+
+        // Warna tema untuk tombol agar warna-warni
+        const buttonColors = [
+            'bg-red-400 hover:bg-red-500 border-red-500 text-white',
+            'bg-blue-400 hover:bg-blue-500 border-blue-500 text-white',
+            'bg-green-400 hover:bg-green-500 border-green-500 text-white',
+            'bg-orange-400 hover:bg-orange-500 border-orange-500 text-white'
+        ];
+
+        const mascots = ['🤔', '🧐', '🤓', '👀', '💡'];
+
+        const AudioManager = {
+            isInitialized: false,
+            isMuted: false,
+            bgmSynth: null,
+            sfxSynth: null,
+            bgmPart: null,
+
+            async init() {
+                if (this.isInitialized) return;
+                
+                // Browser mensyaratkan interaksi user sebelum memutar suara
+                await Tone.start();
+                
+                // Setup Efek Suara (SFX)
+                this.sfxSynth = new Tone.PolySynth(Tone.Synth).toDestination();
+                this.sfxSynth.volume.value = -5;
+
+                // Setup Musik Latar (BGM) bernuansa game retro
+                this.bgmSynth = new Tone.PolySynth(Tone.FMSynth).toDestination();
+                this.bgmSynth.volume.value = -20; // Volume rendah agar santai
+
+                // Melodi riang yang berulang
+                const melody = [
+                    { time: 0, note: ["C4", "E4"] },
+                    { time: 0.5, note: "G4" },
+                    { time: 1, note: ["C4", "F4"] },
+                    { time: 1.5, note: "A4" },
+                    { time: 2, note: ["D4", "G4"] },
+                    { time: 2.5, note: "B4" },
+                    { time: 3, note: ["C4", "E4"] },
+                    { time: 3.5, note: "G4" }
+                ];
+
+                this.bgmPart = new Tone.Part((time, value) => {
+                    this.bgmSynth.triggerAttackRelease(value.note, "8n", time);
+                }, melody).start(0);
+
+                this.bgmPart.loop = true;
+                this.bgmPart.loopEnd = 4; // Mengulang setiap 4 ketukan
+                
+                Tone.Transport.bpm.value = 100;
+                Tone.Transport.start();
+
+                this.isInitialized = true;
+                document.getElementById('btn-mute').classList.remove('hidden');
+            },
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                Tone.Destination.mute = this.isMuted;
+                document.getElementById('btn-mute').innerText = this.isMuted ? '🔇' : '🔊';
+            },
+
+            playClick() {
+                if (!this.isInitialized || this.isMuted) return;
+                this.sfxSynth.triggerAttackRelease("C5", "32n");
+            },
+
+            playCorrect() {
+                if (!this.isInitialized || this.isMuted) return;
+                const now = Tone.now();
+                this.sfxSynth.triggerAttackRelease("C5", "16n", now);
+                this.sfxSynth.triggerAttackRelease("E5", "16n", now + 0.1);
+                this.sfxSynth.triggerAttackRelease("G5", "8n", now + 0.2);
+            },
+
+            playWrong() {
+                if (!this.isInitialized || this.isMuted) return;
+                const now = Tone.now();
+                this.sfxSynth.triggerAttackRelease("Eb3", "8n", now);
+                this.sfxSynth.triggerAttackRelease("C3", "4n", now + 0.2);
+            },
+
+            playWin() {
+                if (!this.isInitialized || this.isMuted) return;
+                const now = Tone.now();
+                this.sfxSynth.triggerAttackRelease(["C4", "E4", "G4"], "4n", now);
+                this.sfxSynth.triggerAttackRelease(["F4", "A4", "C5"], "4n", now + 0.3);
+                this.sfxSynth.triggerAttackRelease(["G4", "B4", "D5"], "4n", now + 0.6);
+                this.sfxSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "1m", now + 0.9);
+            }
+        };
+
+        function showScreen(screenId) {
+            document.getElementById('screen-start').classList.add('hidden');
+            document.getElementById('screen-material').classList.add('hidden');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.add('hidden');
+            
+            const activeScreen = document.getElementById(screenId);
+            activeScreen.classList.remove('hidden');
+            
+            // Tambahkan display: flex jika itu layar materi atau game
+            if(screenId === 'screen-material' || screenId === 'screen-game') {
+                activeScreen.classList.add('flex');
+            }
+            
+            activeScreen.classList.add('animate-pop');
+        }
+
+        function startLearning() {
+            AudioManager.init(); // Inisialisasi audio saat interaksi pertama
+            AudioManager.playClick();
+            currentSlideIndex = 0;
+            showScreen('screen-material');
+            updateSlideView();
+        }
+
+        function updateSlideView() {
+            // Sembunyikan dan tampilkan slide yang sesuai
+            document.querySelectorAll('.material-slide').forEach((el, index) => {
+                if(index === currentSlideIndex) {
+                    el.classList.remove('hidden');
+                    // Reset animasi pop
+                    el.classList.remove('animate-pop');
+                    void el.offsetWidth; // Memicu reflow
+                    el.classList.add('animate-pop');
+                } else {
+                    el.classList.add('hidden');
+                }
+            });
+
+            // Update indikator titik (dots progress)
+            const dots = document.getElementById('slide-indicators').children;
+            for(let i = 0; i < dots.length; i++) {
+                if(i === currentSlideIndex) {
+                    dots[i].className = "h-3 w-8 bg-blue-600 rounded-full transition-all duration-300";
+                } else {
+                    dots[i].className = "h-3 w-3 bg-gray-300 rounded-full transition-all duration-300";
+                }
+            }
+
+            // Atur visibilitas tombol
+            const btnPrev = document.getElementById('btn-prev-slide');
+            const btnNext = document.getElementById('btn-next-slide');
+            const btnStart = document.getElementById('btn-start-game-from-slide');
+
+            if (currentSlideIndex === 0) {
+                btnPrev.classList.add('hidden');
+            } else {
+                btnPrev.classList.remove('hidden');
+            }
+
+            if (currentSlideIndex === totalSlides - 1) {
+                btnNext.classList.add('hidden');
+                btnStart.classList.remove('hidden');
+            } else {
+                btnNext.classList.remove('hidden');
+                btnStart.classList.add('hidden');
+            }
+        }
+
+        function nextSlide() {
+            AudioManager.playClick();
+            if (currentSlideIndex < totalSlides - 1) {
+                currentSlideIndex++;
+                updateSlideView();
+            }
+        }
+
+        function prevSlide() {
+            AudioManager.playClick();
+            if (currentSlideIndex > 0) {
+                currentSlideIndex--;
+                updateSlideView();
+            }
+        }
+
+        function startGame() {
+            AudioManager.playClick();
+            currentQuestionIndex = 0;
+            score = 0;
+            updateScoreDisplay();
+            showScreen('screen-game');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswering = false;
+            const currentQ = quizData[currentQuestionIndex];
+            
+            // Update Header & Progress
+            document.getElementById('q-current').innerText = currentQuestionIndex + 1;
+            const progressPercent = ((currentQuestionIndex) / quizData.length) * 100;
+            document.getElementById('progress-bar').style.width = `${progressPercent}%`;
+            
+            // Ubah Maskot secara acak
+            document.getElementById('mascot').innerText = mascots[Math.floor(Math.random() * mascots.length)];
+
+            // Set Teks Pertanyaan
+            document.getElementById('question-text').innerText = currentQ.question;
+
+            // Render Tombol Pilihan Jawaban
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = '';
+
+            // Acak urutan opsi jawaban (Fisher-Yates Shuffle)
+            let shuffledOptions = [...currentQ.options];
+            for (let i = shuffledOptions.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+            }
+
+            // Buat elemen tombol untuk setiap opsi
+            shuffledOptions.forEach((option, index) => {
+                const btn = document.createElement('button');
+                // Menggunakan tema warna berbeda untuk tiap tombol (max 4)
+                const colorClass = buttonColors[index % buttonColors.length];
+                
+                btn.className = `btn-game w-full text-xl font-black py-4 px-6 rounded-2xl border-4 ${colorClass}`;
+                btn.innerText = option;
+                btn.onclick = () => handleAnswer(option, currentQ.correctAnswer);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleAnswer(selectedOption, correctOption) {
+            if (isAnswering) return; // Kunci input jika sedang proses animasi
+            isAnswering = true;
+
+            const isCorrect = selectedOption === correctOption;
+            
+            if (isCorrect) {
+                AudioManager.playCorrect(); // Mainkan suara benar
+                score += 10; // Tambah 10 poin per soal
+                updateScoreDisplay();
+                showFeedback(true, "Hebat! Benar Sekali! 🌟", `"${correctOption}" adalah jawaban yang tepat!`);
+            } else {
+                AudioManager.playWrong(); // Mainkan suara salah
+                showFeedback(false, "Yaaah, Kurang Tepat! 😢", `Jawaban yang benar adalah "${correctOption}". Tetap semangat!`);
+            }
+        }
+
+        function nextQuestion() {
+            AudioManager.playClick();
+            hideFeedback();
+            currentQuestionIndex++;
+            
+            // Update progres bar ke penuh jika selesai
+            if(currentQuestionIndex === quizData.length) {
+               document.getElementById('progress-bar').style.width = `100%`; 
+            }
+
+            if (currentQuestionIndex < quizData.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function showFeedback(isCorrect, title, message) {
+            const overlay = document.getElementById('feedback-overlay');
+            const emojiEl = document.getElementById('feedback-emoji');
+            const titleEl = document.getElementById('feedback-title');
+            const textEl = document.getElementById('feedback-text');
+
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex', 'animate-pop');
+
+            if (isCorrect) {
+                emojiEl.innerText = ['🥳','🤩','🚀','🏆'][Math.floor(Math.random() * 4)];
+                titleEl.className = "text-4xl font-black mb-2 text-green-500 drop-shadow-md";
+                titleEl.innerText = title;
+                // Tambahkan konfeti mini
+                createConfetti(20);
+            } else {
+                emojiEl.innerText = '💪';
+                titleEl.className = "text-4xl font-black mb-2 text-red-500 drop-shadow-md";
+                titleEl.innerText = title;
+                // Goyangkan kontainer permainan
+                document.querySelector('main').classList.add('animate-shake');
+                setTimeout(() => document.querySelector('main').classList.remove('animate-shake'), 500);
+            }
+            
+            textEl.innerText = message;
+        }
+
+        function hideFeedback() {
+            const overlay = document.getElementById('feedback-overlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex', 'animate-pop');
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('score-display').innerText = score;
+        }
+
+        function endGame() {
+            AudioManager.playWin(); // Mainkan suara kemenangan
+            showScreen('screen-result');
+            document.getElementById('final-score').innerText = score;
+
+            const starsContainer = document.getElementById('stars-container');
+            const resultMsg = document.getElementById('result-message');
+            starsContainer.innerHTML = '';
+            
+            let stars = 0;
+            let message = "";
+
+            if (score === 100) {
+                stars = 3;
+                message = "Sempurna! Kamu adalah Master Kata! 👑";
+                createConfetti(100);
+            } else if (score >= 70) {
+                stars = 2;
+                message = "Kerja bagus! Sedikit lagi menuju sempurna! 🚀";
+                createConfetti(50);
+            } else if (score >= 40) {
+                stars = 1;
+                message = "Lumayan! Ayo banyak baca buku lagi yuk! 📚";
+            } else {
+                stars = 0;
+                message = "Jangan menyerah! Coba lagi ya, pasti bisa! 💪";
+            }
+
+            // Render Bintang
+            for (let i = 0; i < 3; i++) {
+                const star = document.createElement('span');
+                star.innerText = i < stars ? '⭐' : '☆';
+                // Beri efek pop up pada bintang satu per satu
+                star.style.opacity = '0';
+                star.style.animation = `pop 0.5s ${i * 0.3}s forwards`;
+                starsContainer.appendChild(star);
+            }
+            
+            resultMsg.innerText = message;
+        }
+
+        function resetGame() {
+            AudioManager.playClick();
+            startGame();
+        }
+
+        function createConfetti(amount) {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+            for (let i = 0; i < amount; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                
+                // Randomize position, color, size, and duration
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                const size = Math.random() * 10 + 5;
+                confetti.style.width = size + 'px';
+                confetti.style.height = (size * 1.5) + 'px';
+                
+                const duration = Math.random() * 2 + 2;
+                confetti.style.animationDuration = duration + 's';
+                
+                // Add varied shapes (circles and rectangles)
+                if(Math.random() > 0.5) {
+                    confetti.style.borderRadius = '50%';
+                }
+
+                document.body.appendChild(confetti);
+
+                // Hapus elemen setelah animasi selesai agar tidak membebani memori
+                setTimeout(() => {
+                    confetti.remove();
+                }, duration * 1000);
+            }
+        }
+    </script>
+</body>
+</html>

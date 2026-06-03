@@ -119,14 +119,31 @@
                     <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
                     <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
                     <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
+                    <div class="h-3 w-3 bg-gray-300 rounded-full"></div>
                 </div>
             </div>
 
             <!-- Area Konten Slide -->
             <div class="flex-grow flex items-center justify-center relative min-h-[250px]">
                 
-                <!-- Slide 1: Definisi Sinonim -->
+                <!-- Slide 0: Tujuan Pembelajaran -->
                 <div id="slide-0" class="material-slide w-full text-center animate-pop">
+                    <div class="text-7xl mb-4">🎯</div>
+                    <h3 class="text-3xl font-black text-blue-600 mb-4 drop-shadow-sm">Tujuan Belajar Kita</h3>
+                    <div class="bg-blue-100 p-6 rounded-3xl border-4 border-blue-300 flex flex-col gap-4 font-bold text-lg text-blue-900 shadow-inner text-left">
+                        <div class="flex items-start gap-3">
+                            <span class="text-2xl">1️⃣</span>
+                            <p>Memahami pengertian <b>Sinonim</b> (Persamaan Kata) dan <b>Antonim</b> (Lawan Kata).</p>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="text-2xl">2️⃣</span>
+                            <p>Dapat menentukan dan mencocokkan kata-kata yang bersinonim atau berantonim dengan tepat.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slide 1: Definisi Sinonim -->
+                <div id="slide-1" class="material-slide hidden w-full text-center animate-pop">
                     <div class="text-7xl mb-4">🤝</div>
                     <h3 class="text-3xl font-black text-purple-600 mb-4 drop-shadow-sm">Apa itu Sinonim?</h3>
                     <p class="text-xl text-gray-700 font-bold bg-purple-100 p-6 rounded-3xl border-4 border-purple-300 shadow-inner">
@@ -136,7 +153,7 @@
                 </div>
 
                 <!-- Slide 2: Contoh Sinonim -->
-                <div id="slide-1" class="material-slide hidden w-full text-center animate-pop">
+                <div id="slide-2" class="material-slide hidden w-full text-center animate-pop">
                     <div class="text-7xl mb-4">✨</div>
                     <h3 class="text-3xl font-black text-green-600 mb-4 drop-shadow-sm">Contoh Sinonim</h3>
                     <div class="bg-green-100 p-5 rounded-3xl border-4 border-green-300 flex flex-col gap-3 font-black text-xl text-green-900 shadow-inner">
@@ -147,7 +164,7 @@
                 </div>
 
                 <!-- Slide 3: Definisi Antonim -->
-                <div id="slide-2" class="material-slide hidden w-full text-center animate-pop">
+                <div id="slide-3" class="material-slide hidden w-full text-center animate-pop">
                     <div class="text-7xl mb-4">⚔️</div>
                     <h3 class="text-3xl font-black text-red-600 mb-4 drop-shadow-sm">Apa itu Antonim?</h3>
                     <p class="text-xl text-gray-700 font-bold bg-red-100 p-6 rounded-3xl border-4 border-red-300 shadow-inner">
@@ -157,7 +174,7 @@
                 </div>
 
                 <!-- Slide 4: Contoh Antonim -->
-                <div id="slide-3" class="material-slide hidden w-full text-center animate-pop">
+                <div id="slide-4" class="material-slide hidden w-full text-center animate-pop">
                     <div class="text-7xl mb-4">⚖️</div>
                     <h3 class="text-3xl font-black text-orange-600 mb-4 drop-shadow-sm">Contoh Antonim</h3>
                     <div class="bg-orange-100 p-5 rounded-3xl border-4 border-orange-300 flex flex-col gap-3 font-black text-xl text-orange-900 shadow-inner">
@@ -219,7 +236,7 @@
                 <div id="feedback-emoji" class="text-8xl mb-4"></div>
                 <h2 id="feedback-title" class="text-4xl font-black mb-2"></h2>
                 <p id="feedback-text" class="text-xl font-bold text-gray-700 text-center px-4 mb-8"></p>
-                <button onclick="nextQuestion()" class="btn-game bg-blue-500 hover:bg-blue-600 text-white font-black text-2xl py-3 px-8 rounded-2xl border-4 border-blue-700">
+                <button id="feedback-btn" class="btn-game bg-blue-500 hover:bg-blue-600 text-white font-black text-2xl py-3 px-8 rounded-2xl border-4 border-blue-700">
                     LANJUT ➡️
                 </button>
             </div>
@@ -304,9 +321,10 @@
         let currentQuestionIndex = 0;
         let score = 0;
         let isAnswering = false; // Mencegah klik ganda
+        let currentQuestionAttempts = 0; // Melacak jumlah percobaan untuk sistem skor
 
         let currentSlideIndex = 0;
-        const totalSlides = 4;
+        const totalSlides = 5;
 
         // Warna tema untuk tombol agar warna-warni
         const buttonColors = [
@@ -497,6 +515,7 @@
 
         function loadQuestion() {
             isAnswering = false;
+            currentQuestionAttempts = 0; // Reset percobaan tiap soal baru
             const currentQ = quizData[currentQuestionIndex];
             
             // Update Header & Progress
@@ -542,13 +561,29 @@
             
             if (isCorrect) {
                 AudioManager.playCorrect(); // Mainkan suara benar
-                score += 10; // Tambah 10 poin per soal
+                
+                // Beri skor penuh jika langsung benar, kurangi jika ada salah sebelumnya
+                if (currentQuestionAttempts === 0) {
+                    score += 10;
+                } else if (currentQuestionAttempts === 1) {
+                    score += 5;
+                } else {
+                    score += 2;
+                }
+                
                 updateScoreDisplay();
                 showFeedback(true, "Hebat! Benar Sekali! 🌟", `"${correctOption}" adalah jawaban yang tepat!`);
             } else {
                 AudioManager.playWrong(); // Mainkan suara salah
-                showFeedback(false, "Yaaah, Kurang Tepat! 😢", `Jawaban yang benar adalah "${correctOption}". Tetap semangat!`);
+                currentQuestionAttempts++; // Tambah jumlah kesalahan di soal ini
+                showFeedback(false, "Yaaah, Kurang Tepat! 😢", `Ayo coba pikirkan lagi, kamu pasti bisa!`);
             }
+        }
+
+        function retryQuestion() {
+            AudioManager.playClick();
+            hideFeedback();
+            isAnswering = false; // Buka kembali input jawaban
         }
 
         function nextQuestion() {
@@ -573,6 +608,7 @@
             const emojiEl = document.getElementById('feedback-emoji');
             const titleEl = document.getElementById('feedback-title');
             const textEl = document.getElementById('feedback-text');
+            const btnEl = document.getElementById('feedback-btn');
 
             overlay.classList.remove('hidden');
             overlay.classList.add('flex', 'animate-pop');
@@ -581,12 +617,18 @@
                 emojiEl.innerText = ['🥳','🤩','🚀','🏆'][Math.floor(Math.random() * 4)];
                 titleEl.className = "text-4xl font-black mb-2 text-green-500 drop-shadow-md";
                 titleEl.innerText = title;
+                btnEl.innerText = "LANJUT ➡️";
+                btnEl.className = "btn-game bg-blue-500 hover:bg-blue-600 text-white font-black text-2xl py-3 px-8 rounded-2xl border-4 border-blue-700";
+                btnEl.onclick = nextQuestion;
                 // Tambahkan konfeti mini
                 createConfetti(20);
             } else {
                 emojiEl.innerText = '💪';
                 titleEl.className = "text-4xl font-black mb-2 text-red-500 drop-shadow-md";
                 titleEl.innerText = title;
+                btnEl.innerText = "COBA LAGI 🔄";
+                btnEl.className = "btn-game bg-orange-400 hover:bg-orange-500 text-white font-black text-2xl py-3 px-8 rounded-2xl border-4 border-orange-600";
+                btnEl.onclick = retryQuestion;
                 // Goyangkan kontainer permainan
                 document.querySelector('main').classList.add('animate-shake');
                 setTimeout(() => document.querySelector('main').classList.remove('animate-shake'), 500);
